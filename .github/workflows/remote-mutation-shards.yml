@@ -1,0 +1,37 @@
+name: Remote mutation shards
+on:
+  push:
+    branches: [codex/validate-remote-addresses]
+permissions:
+  contents: read
+jobs:
+  mutants:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run one quarter of the unchanged mutation cases
+        env:
+          SHARD: ${{ matrix.shard }}
+          PYTHONUNBUFFERED: '1'
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, sys
+          path = pathlib.Path('Tests/checks/remote-rules/mutants.py').resolve()
+          setup, runner = path.read_text().split('caught = 0\n', 1)
+          sys.argv = [str(path), os.getcwd()]
+          scope = {'__file__': str(path), '__name__': '__main__'}
+          exec(compile(setup, str(path), 'exec'), scope)
+          cases = scope['M']
+          assert len(cases) == 76
+          scope['M'] = cases[int(os.environ['SHARD'])::4]
+          exec(compile('caught = 0\n' + runner, str(path), 'exec'), scope)
+          assert scope['caught'] == len(scope['M']), 'a mutation survived or failed to compile/apply'
+          PY
