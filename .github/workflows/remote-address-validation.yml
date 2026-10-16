@@ -5,8 +5,27 @@ on:
 permissions:
   contents: read
 jobs:
+  baseline:
+    runs-on: xcode-27
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Run new regressions against upstream SavedMacs
+        shell: bash
+        run: |
+          git show 5c323e6965b5011809548e5067f9e8e6fa6adf54:iOSClient/SavedMacs.swift > iOSClient/SavedMacs.swift
+          status=0
+          Tests/checks/run-all.sh -v remote-rules > baseline.log 2>&1 || status=$?
+          cat baseline.log
+          test "$status" -ne 0
+          grep -q 'FAIL a DNS name is not a link-local or loopback IP' baseline.log
+          grep -q 'FAIL superseding: an implicit typed port keeps the old destination' baseline.log
+          ! grep -q 'did not compile' baseline.log
   checks:
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -14,7 +33,14 @@ jobs:
           persist-credentials: false
       - name: Toolchain
         run: swift --version
-      - name: Remote rules
+      - name: Affected checks
         run: Tests/checks/run-all.sh -v remote-rules home-model home-records protocol
+  mutants:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Remote rule mutants
         run: Tests/checks/run-all.sh --mutants remote-rules
