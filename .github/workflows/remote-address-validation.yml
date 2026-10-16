@@ -15,4 +15,6 @@ jobs:
       - name: Toolchain
         run: swift --version
       - name: Remote rules
-        run: Tests/checks/run-all.sh -v remote-rules
+        run: Tests/checks/run-all.sh -v remote-rules home-model home-records protocol
+      - name: Remote rule mutants
+        run: Tests/checks/run-all.sh --mutants remote-rules
