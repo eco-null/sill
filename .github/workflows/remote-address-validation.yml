@@ -1,7 +1,6 @@
 name: Remote address regression proof
 on:
-  push:
-    branches: [codex/validate-remote-addresses]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
